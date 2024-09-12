@@ -1,0 +1,99 @@
+To pass the `username` and `password` from an Angular frontend to a WCF service using Axios in an Express backend, you can follow these steps:
+
+### Steps:
+1. **Angular**: Capture the `username` and `password` from a login form and send it to the Express backend using an HTTP request.
+2. **Express**: In the backend, retrieve the credentials from the request body and pass them in the Axios `config` to make a request to the WCF service.
+
+### 1. Angular Frontend (Sending `username` and `password`):
+Assuming you have a login form in Angular, you can capture the `username` and `password` and send them to the Express backend.
+
+```typescript
+import { HttpClient } from '@angular/common/http';
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-login',
+  template: `
+    <form (submit)="onSubmit()">
+      <input type="text" [(ngModel)]="username" placeholder="Username" />
+      <input type="password" [(ngModel)]="password" placeholder="Password" />
+      <button type="submit">Login</button>
+    </form>
+  `
+})
+export class LoginComponent {
+  username: string = '';
+  password: string = '';
+
+  constructor(private http: HttpClient) {}
+
+  onSubmit() {
+    const credentials = {
+      username: this.username,
+      password: this.password
+    };
+
+    this.http.post('/api/auth', credentials).subscribe(
+      (response) => console.log('Success', response),
+      (error) => console.error('Error', error)
+    );
+  }
+}
+```
+
+### 2. Express Backend (Receiving credentials and passing to WCF):
+The Express server will receive the `username` and `password` in the request body, and then pass them to the WCF service using Axios.
+
+```js
+const express = require('express');
+const axios = require('axios');
+const bodyParser = require('body-parser');
+
+const app = express();
+app.use(bodyParser.json()); // To parse JSON bodies
+
+// Endpoint to receive credentials from Angular
+app.post('/api/auth', async (req, res) => {
+  const { username, password } = req.body;
+
+  const config = {
+    method: 'post',
+    url: 'https://your-wcf-service-endpoint',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    auth: {
+      username: username,  // Pass the username from Angular
+      password: password   // Pass the password from Angular
+    },
+    data: {
+      // If WCF expects some request body data
+      // Add it here
+    }
+  };
+
+  try {
+    const response = await axios.request(config);
+    res.json(response.data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error calling WCF service');
+  }
+});
+
+app.listen(3000, () => {
+  console.log('Server is running on port 3000');
+});
+```
+
+### Explanation:
+1. **Angular**: 
+   - The form captures the `username` and `password`.
+   - The `HttpClient` service sends the credentials to the `/api/auth` endpoint in the Express backend.
+
+2. **Express**:
+   - The backend receives the credentials from the request body.
+   - Using `axios.request()`, the credentials are passed to the WCF service via the `auth` property in the config object.
+   - The WCF service is called, and the response is returned to Angular.
+
+This allows you to securely pass the `username` and `password` from Angular to WCF via the Express backend.
