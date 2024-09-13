@@ -1,0 +1,98 @@
+To convert this JavaScript encryption code into TypeScript for use in your Angular 17 app, follow these steps. Since you’re using Angular 17 and Bootstrap 5, ensure that the encryption library you're using (CryptoJS) is properly installed.
+
+1. **Install CryptoJS in your Angular project:**
+   Run the following command to add CryptoJS to your project:
+   ```bash
+   npm install crypto-js
+   ```
+
+2. **Create a new service in Angular for encryption**:
+   You can create a service in Angular to handle this encryption functionality.
+
+   ```bash
+   ng generate service encryption
+   ```
+
+3. **Add the encryption logic to the service**:
+   Open the newly generated service (`encryption.service.ts`) and modify it to include the encryption logic using TypeScript.
+
+### `encryption.service.ts`
+
+```typescript
+import { Injectable } from '@angular/core';
+import * as CryptoJS from 'crypto-js';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class EncryptionService {
+
+  constructor() { }
+
+  encrypt(txtUserName: string, txtPassword: string, txtOTP: string): { encryptedUsername: string, encryptedPassword: string, encryptedOTP: string } {
+    const key = CryptoJS.enc.Utf8.parse('8080808080808080');
+    const iv = CryptoJS.enc.Utf8.parse('8080808080808080');
+
+    const encryptedUsername = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(txtUserName), key, {
+      keySize: 128 / 8,
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    }).toString();
+
+    const encryptedPassword = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(txtPassword), key, {
+      keySize: 128 / 8,
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    }).toString();
+
+    const encryptedOTP = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(txtOTP), key, {
+      keySize: 128 / 8,
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    }).toString();
+
+    return { encryptedUsername, encryptedPassword, encryptedOTP };
+  }
+}
+```
+
+4. **Using the encryption service in a component**:
+
+In your component, inject the `EncryptionService` and use the encryption method when needed.
+
+### Example Component:
+
+```typescript
+import { Component } from '@angular/core';
+import { EncryptionService } from './encryption.service';
+
+@Component({
+  selector: 'app-login',
+  templateUrl: './login.component.html',
+})
+export class LoginComponent {
+
+  constructor(private encryptionService: EncryptionService) { }
+
+  encryptData() {
+    const username = 'user';  // Get from form input
+    const password = 'password';  // Get from form input
+    const otp = '123456';  // Get from form input
+
+    const encryptedData = this.encryptionService.encrypt(username, password, otp);
+
+    console.log('Encrypted Username:', encryptedData.encryptedUsername);
+    console.log('Encrypted Password:', encryptedData.encryptedPassword);
+    console.log('Encrypted OTP:', encryptedData.encryptedOTP);
+
+    // You can now use the encrypted data as needed, e.g., send it to your API
+  }
+}
+```
+
+### Notes:
+- Replace the static values (`username`, `password`, and `otp`) with actual input from your Angular form.
+- Ensure proper error handling in case any encryption step fails.
