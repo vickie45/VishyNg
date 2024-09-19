@@ -1,0 +1,62 @@
+When you build your Angular app using the `ng build --prod` command, the `dist` folder typically only contains the static files like `index.html`, `main.js`, `polyfills.js`, `styles.css`, etc. Angular itself does not generate a `web.config` file because it’s specific to hosting environments like IIS.
+
+Since you're deploying to IIS, you need to **manually create the `web.config` file** to enable features like routing (so Angular's routing can work without issues) and properly serve your app.
+
+Here’s how to add the `web.config` file:
+
+### Steps to Add `web.config` to Your Angular App
+
+1. **Create a `web.config` File**:
+   In your `dist/your-app-name/` folder (the folder with the `index.html` and other build files), create a new file called `web.config`.
+
+2. **Add URL Rewrite Rules**:
+   Copy the following content into the `web.config` file. This configuration tells IIS to serve the `index.html` file for any routes that Angular handles, and it will rewrite the URL accordingly.
+
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <configuration>
+     <system.webServer>
+       <rewrite>
+         <rules>
+           <rule name="Angular Routes" stopProcessing="true">
+             <match url=".*" />
+             <conditions logicalGrouping="MatchAll">
+               <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+               <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+             </conditions>
+             <action type="Rewrite" url="/index.html" />
+           </rule>
+         </rules>
+       </rewrite>
+
+       <staticContent>
+         <mimeMap fileExtension=".json" mimeType="application/json" />
+       </staticContent>
+     </system.webServer>
+   </configuration>
+   ```
+
+   This configuration includes:
+   - **URL rewriting**: Redirects any route that isn’t a file or directory to the `index.html` file, ensuring Angular's routing works correctly.
+   - **MIME type for `.json` files**: Adds a MIME type for `.json` files to ensure they’re served correctly (if your app uses JSON files).
+
+3. **Deploy the `web.config` File with Your Angular App**:
+   After creating the `web.config` file, copy the entire content of the `dist/your-app-name/` folder (including the newly created `web.config` file) to the directory where you're hosting your Angular app on IIS (e.g., `C:\inetpub\wwwroot\angular-app`).
+
+4. **Restart IIS**:
+   Once you've copied the files to the server, restart IIS to apply the changes.
+
+   You can restart IIS by running the following command in an elevated Command Prompt:
+   ```bash
+   iisreset
+   ```
+
+5. **Test the Application**:
+   Open your browser and navigate to your Angular app URL. Ensure that both direct links and Angular routing work correctly. For example, if your app has routes like `/home` or `/about`, accessing those routes directly (e.g., `http://your-server/home`) should work and load the Angular app.
+
+### Summary:
+- **Manually create a `web.config` file** inside the `dist` folder after building your Angular app.
+- Add necessary URL rewrite rules to ensure proper Angular routing in IIS.
+- Deploy the `web.config` along with the other build files to IIS.
+
+This should allow your Angular app to work seamlessly with IIS, including handling Angular routes.
