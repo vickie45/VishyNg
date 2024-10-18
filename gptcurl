@@ -1,0 +1,59 @@
+const express = require('express');
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
+const app = express();
+
+const OPENAI_API_KEY = 'fake-one45vsn-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';
+
+// Ensure the "results" directory exists
+const resultsDir = path.join(__dirname, 'results');
+if (!fs.existsSync(resultsDir)) {
+    fs.mkdirSync(resultsDir);
+}
+
+app.use(express.json());
+
+app.post('/chatgpt', async (req, res) => {
+    const message = req.body.message || "Hello, how are you?";
+    
+    try {
+        const response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: "gpt-4",
+                messages: [
+                    { role: "user", content: message }
+                ],
+                temperature: 0.7
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                }
+            }
+        );
+
+        const chatResponse = response.data.choices[0].message.content;
+        
+        // Create a sanitized filename from the message (replace spaces and special characters)
+        const filename = `${message.split(' ').slice(0, 5).join('_').replace(/[^a-zA-Z0-9_]/g, '') || 'chatgpt_response'}.md`;
+        
+        // Path to save the file
+        const filePath = path.join(resultsDir, filename);
+        
+        // Write response to a .md file
+        const fileContent = `# ${message}\n\n${chatResponse}`;
+        fs.writeFileSync(filePath, fileContent, 'utf8');
+        
+        res.json({ message: 'Response saved', file: filename, content: chatResponse });
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+});
+
+app.listen(3000, () => {
+    console.log('Server is running on port 3000');
+});
