@@ -1,0 +1,151 @@
+To handle JWT token storage, expiration checking, and logout on token expiry in an Angular app, you can follow these steps:
+
+1. Store the JWT token:
+
+You can store the token in localStorage or sessionStorage after login.
+
+// login.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class LoginService {
+  private loginUrl = 'API_ENDPOINT'; // Replace with your login endpoint
+
+  constructor(private http: HttpClient, private router: Router) {}
+
+  login(credentials: any) {
+    return this.http.post<any>(this.loginUrl, credentials).subscribe(
+      (response) => {
+        const token = response.token;
+        localStorage.setItem('jwtToken', token); // Store token in localStorage
+        this.router.navigate(['/dashboard']); // Navigate to dashboard after login
+      },
+      (error) => {
+        console.error('Login failed', error);
+      }
+    );
+  }
+
+  logout() {
+    localStorage.removeItem('jwtToken'); // Clear token on logout
+    this.router.navigate(['/login']);
+  }
+
+  getToken() {
+    return localStorage.getItem('jwtToken');
+  }
+
+  isLoggedIn(): boolean {
+    return !!this.getToken(); // Check if token exists
+  }
+}
+
+2. Check if the token is expired:
+
+You can decode the JWT token and check the exp field to determine if it’s expired.
+
+import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
+import jwt_decode from 'jwt-decode'; // Import jwt-decode library
+
+@Injectable({
+  providedIn: 'root',
+})
+export class AuthService {
+  constructor(private router: Router) {}
+
+  getToken(): string | null {
+    return localStorage.getItem('jwtToken');
+  }
+
+  isTokenExpired(token: string): boolean {
+    const decoded: any = jwt_decode(token);
+    const currentTime = Math.floor(Date.now() / 1000);
+    return decoded.exp < currentTime; // Returns true if expired
+  }
+
+  checkTokenExpiration() {
+    const token = this.getToken();
+    if (token && this.isTokenExpired(token)) {
+      this.logout();
+    }
+  }
+
+  logout() {
+    localStorage.removeItem('jwtToken'); // Remove token
+    this.router.navigate(['/login']); // Redirect to login
+  }
+}
+
+3. Use the token for future requests:
+
+You can intercept HTTP requests and append the JWT token in the Authorization header using an HTTP interceptor.
+
+// auth.interceptor.ts
+import { Injectable } from '@angular/core';
+import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { AuthService } from './auth.service';
+
+@Injectable()
+export class AuthInterceptor implements HttpInterceptor {
+  constructor(private authService: AuthService) {}
+
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    const token = this.authService.getToken();
+
+    if (token) {
+      const cloned = req.clone({
+        headers: req.headers.set('Authorization', `Bearer ${token}`),
+      });
+      return next.handle(cloned);
+    }
+    return next.handle(req);
+  }
+}
+
+In your app.module.ts, add this interceptor to the providers array:
+
+// app.module.ts
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { AuthInterceptor } from './auth.interceptor';
+
+@NgModule({
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+  ],
+})
+export class AppModule {}
+
+4. Logout if the token is expired:
+
+You can use a guard or a global check to trigger logout if the token has expired.
+
+// app.component.ts (or use a route guard)
+import { AuthService } from './auth.service';
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+})
+export class AppComponent implements OnInit {
+  constructor(private authService: AuthService) {}
+
+  ngOnInit() {
+    this.authService.checkTokenExpiration(); // Check token expiration on app load
+  }
+}
+
+Flow Summary:
+
+	1.	Login: On successful login, the JWT token is stored in localStorage.
+	2.	Future Requests: The token is automatically appended to all HTTP requests via an interceptor.
+	3.	Expiration Check: The token is checked for expiration on app load or periodically. If expired, the user is logged out.
+	4.	Logout: The token is removed from localStorage, and the user is redirected to the login page.
+
+This ensures token-based authentication with automatic logout when the JWT token expires.
