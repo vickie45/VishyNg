@@ -1,0 +1,217 @@
+To add pagination to the transaction tables in both the “OPD” and “IPD” subtabs, you can either implement pagination manually by handling page navigation and slicing the data array or use a third-party library like ngx-pagination to simplify the setup.
+
+Here’s how to implement pagination in both ways:
+
+Method 1: Manual Pagination
+
+In this approach, we handle pagination manually by slicing the data based on the current page and page size.
+
+HTML Template (With Pagination Controls)
+
+Update the table and add pagination controls below it:
+
+<!-- Table for OPD -->
+<div *ngIf="activeSubTab === 'opd'">
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Transaction ID</th>
+        <th>Patient Name</th>
+        <th>Date of Admission</th>
+        <th>Amount</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let transaction of opdTransactionsPaginated">
+        <td>{{ transaction.id }}</td>
+        <td>{{ transaction.patientName }}</td>
+        <td>{{ transaction.dateOfAdmission | date }}</td>
+        <td>{{ transaction.amount | currency }}</td>
+        <td>{{ transaction.status }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Pagination Controls -->
+  <div class="pagination-controls">
+    <button (click)="prevPage('opd')" [disabled]="currentPageOpd === 1">Previous</button>
+    <span>Page {{ currentPageOpd }} of {{ totalPagesOpd }}</span>
+    <button (click)="nextPage('opd')" [disabled]="currentPageOpd === totalPagesOpd">Next</button>
+  </div>
+</div>
+
+<!-- Table for IPD -->
+<div *ngIf="activeSubTab === 'ipd'">
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Transaction ID</th>
+        <th>Patient Name</th>
+        <th>Date of Admission</th>
+        <th>Amount</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let transaction of ipdTransactionsPaginated">
+        <td>{{ transaction.id }}</td>
+        <td>{{ transaction.patientName }}</td>
+        <td>{{ transaction.dateOfAdmission | date }}</td>
+        <td>{{ transaction.amount | currency }}</td>
+        <td>{{ transaction.status }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Pagination Controls -->
+  <div class="pagination-controls">
+    <button (click)="prevPage('ipd')" [disabled]="currentPageIpd === 1">Previous</button>
+    <span>Page {{ currentPageIpd }} of {{ totalPagesIpd }}</span>
+    <button (click)="nextPage('ipd')" [disabled]="currentPageIpd === totalPagesIpd">Next</button>
+  </div>
+</div>
+
+Component Logic (TypeScript)
+
+Add pagination logic in your component class:
+
+import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+@Component({
+  selector: 'app-transaction-tabs',
+  templateUrl: './transaction-tabs.component.html',
+  styleUrls: ['./transaction-tabs.component.css'],
+})
+export class TransactionTabsComponent implements OnInit {
+  activeTab: string = 'transactions';
+  activeSubTab: string = 'opd';
+  opdTransactions: any[] = [];
+  ipdTransactions: any[] = [];
+  opdTransactionsPaginated: any[] = [];
+  ipdTransactionsPaginated: any[] = [];
+  filters = { admissionDate: '', patientName: '' };
+
+  // Pagination variables
+  pageSize = 5;
+  currentPageOpd = 1;
+  currentPageIpd = 1;
+  totalPagesOpd = 1;
+  totalPagesIpd = 1;
+
+  constructor(private http: HttpClient) {}
+
+  ngOnInit(): void {
+    this.fetchTransactions();
+  }
+
+  selectTab(tab: string): void {
+    this.activeTab = tab;
+  }
+
+  selectSubTab(subTab: string): void {
+    this.activeSubTab = subTab;
+    this.fetchTransactions();
+  }
+
+  fetchTransactions(): void {
+    const params = {
+      dateOfAdmission: this.filters.admissionDate,
+      patientName: this.filters.patientName,
+    };
+
+    if (this.activeSubTab === 'opd') {
+      this.http.get<any[]>('https://api.example.com/opd-transactions', { params })
+        .subscribe(data => {
+          this.opdTransactions = data;
+          this.totalPagesOpd = Math.ceil(this.opdTransactions.length / this.pageSize);
+          this.updatePaginatedTransactions('opd');
+        });
+    } else if (this.activeSubTab === 'ipd') {
+      this.http.get<any[]>('https://api.example.com/ipd-transactions', { params })
+        .subscribe(data => {
+          this.ipdTransactions = data;
+          this.totalPagesIpd = Math.ceil(this.ipdTransactions.length / this.pageSize);
+          this.updatePaginatedTransactions('ipd');
+        });
+    }
+  }
+
+  // Pagination logic
+  updatePaginatedTransactions(subTab: string): void {
+    const startIndex = (subTab === 'opd' ? this.currentPageOpd : this.currentPageIpd - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+
+    if (subTab === 'opd') {
+      this.opdTransactionsPaginated = this.opdTransactions.slice(startIndex, endIndex);
+    } else if (subTab === 'ipd') {
+      this.ipdTransactionsPaginated = this.ipdTransactions.slice(startIndex, endIndex);
+    }
+  }
+
+  nextPage(subTab: string): void {
+    if (subTab === 'opd' && this.currentPageOpd < this.totalPagesOpd) {
+      this.currentPageOpd++;
+      this.updatePaginatedTransactions('opd');
+    } else if (subTab === 'ipd' && this.currentPageIpd < this.totalPagesIpd) {
+      this.currentPageIpd++;
+      this.updatePaginatedTransactions('ipd');
+    }
+  }
+
+  prevPage(subTab: string): void {
+    if (subTab === 'opd' && this.currentPageOpd > 1) {
+      this.currentPageOpd--;
+      this.updatePaginatedTransactions('opd');
+    } else if (subTab === 'ipd' && this.currentPageIpd > 1) {
+      this.currentPageIpd--;
+      this.updatePaginatedTransactions('ipd');
+    }
+  }
+}
+
+Explanation of Pagination
+
+	•	Pagination Controls: Buttons to navigate between pages, showing the current page number and total pages.
+	•	Page Calculation: totalPagesOpd and totalPagesIpd are calculated by dividing the total number of items by the page size.
+	•	Slicing Data: updatePaginatedTransactions() slices the transactions array based on the currentPage and pageSize to only show a subset of data for the current page.
+	•	Navigation: nextPage() and prevPage() methods control navigation through pages for each subtab.
+
+Method 2: Using ngx-pagination
+
+If you want to simplify pagination, you can install ngx-pagination.
+
+	1.	Install ngx-pagination:
+
+npm install ngx-pagination
+
+
+	2.	Import NgxPaginationModule in your module:
+
+import { NgxPaginationModule } from 'ngx-pagination';
+
+@NgModule({
+  imports: [
+    NgxPaginationModule,
+    // other imports
+  ],
+})
+export class AppModule {}
+
+
+	3.	Update HTML Template with ngx-pagination:
+
+<table class="table table-bordered">
+  <!-- Table Headers -->
+  <tbody>
+    <tr *ngFor="let transaction of opdTransactions | paginate: { itemsPerPage: pageSize, currentPage: currentPageOpd }">
+      <!-- Transaction Data -->
+    </tr>
+  </tbody>
+</table>
+<pagination-controls (pageChange)="currentPageOpd = $event"></pagination-controls>
+
+
+
+With ngx-pagination, you avoid manually calculating pages, making pagination simpler and faster. Both methods will allow users to view transaction details across pages under the “OPD” and “IPD” subtabs.
