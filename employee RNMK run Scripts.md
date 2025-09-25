@@ -382,3 +382,24 @@ main() {
             ;;
         "health")
             health_check
+            ;;
+        "clean")
+            clean_system
+            ;;
+        "reset")
+            reset_database
+            ;;
+        "help"|"--help"|"-h")
+            show_usage
+            ;;
+        *)
+            print_error "Unknown command: $command"
+            echo ""
+            show_usage
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@"
